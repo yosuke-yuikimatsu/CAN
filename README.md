@@ -234,3 +234,50 @@ If you find this work helpful, please cite us:
 
 We thank the open-source community for the implementations of `timm`, which facilitated our baseline comparisons. 
 
+
+## 🧩 CLIP Pipeline (Pretrained Text + CliffordNet Image)
+
+A standard CLIP-style pipeline is available in `clip_pipeline.py`:
+
+- **Text encoder**: pretrained Hugging Face CLIP text model (`openai/clip-vit-base-patch32` by default).
+- **Image encoder**: `CliffordNet` backbone from this repository.
+- **Training objective**: symmetric image-text contrastive loss.
+
+```python
+import torch
+from clip_pipeline import CliffordCLIP, clip_contrastive_loss
+
+model = CliffordCLIP(
+    text_model_name="openai/clip-vit-base-patch32",
+    embed_dim=512,
+    image_encoder_kwargs={
+        "patch_size": 2,
+        "backbone_dim": 128,
+        "depth": 12,
+        "shifts": [1, 2],
+        "enable_cuda": False,
+    },
+)
+
+images = torch.randn(8, 3, 224, 224)
+text_inputs = model.tokenize([
+    "a medical image of skin lesion",
+    "a photo of gastrointestinal tract",
+    "an endoscopy image",
+    "a benign lesion",
+    "a malignant lesion",
+    "a polyp",
+    "normal tissue",
+    "inflammation",
+], device=images.device)
+
+outputs = model(images, text_inputs)
+loss = clip_contrastive_loss(outputs["logits_per_image"], outputs["logits_per_text"])
+loss.backward()
+```
+
+Install dependency:
+
+```bash
+pip install transformers
+```
